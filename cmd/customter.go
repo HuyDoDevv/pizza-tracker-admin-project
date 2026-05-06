@@ -1,12 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"pizza-tracker/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
+
+type CustomerData struct {
+	Title    string
+	Order    models.Order
+	Statuses []string
+}
 
 type OrderFormData struct {
 	PizzaTypes []string
@@ -19,7 +26,7 @@ type OrderRequest struct {
 	Address      string   `form:"address" binding:"required,max=200"`
 	PizzaSizes   []string `form:"pizza_size" binding:"required,min=1,dive,valid_pizza_size"`
 	PizzaTypes   []string `form:"pizza_type" binding:"required,min=1,dive,valid_pizza_type"`
-	Instructions []string `form:"instruction" binding:"max=200"`
+	Instructions []string `form:"instructions" binding:"max=200"`
 }
 
 func (h *Handler) ServeNewOrderForm(c *gin.Context) {
@@ -39,6 +46,7 @@ func (h *Handler) HandlerNewOrderPost(c *gin.Context) {
 	orderItems := make([]models.OrderItem, len(form.PizzaSizes))
 	for i := range orderItems {
 		orderItems[i] = models.OrderItem{
+			OrderID:     "fffff",
 			PizzaSize:   form.PizzaSizes[i],
 			PizzaType:   form.PizzaTypes[i],
 			Instruction: form.Instructions[i],
@@ -52,6 +60,8 @@ func (h *Handler) HandlerNewOrderPost(c *gin.Context) {
 		Status:       models.OrderStatus[0],
 		Items:        orderItems,
 	}
+
+	fmt.Println("odhvduvhsiudhvisdvuisdvhsiduv")
 
 	if err := h.orders.CreateOrder(&order); err != nil {
 		slog.Error("Failed to create order", "error", err)
@@ -77,7 +87,9 @@ func (h *Handler) ServerCustomer(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "customer.tmpl", gin.H{
-		"Order": order,
+	c.HTML(http.StatusOK, "customer.tmpl", CustomerData{
+		Title:    "Pizza Order status" + orderID,
+		Order:    *order,
+		Statuses: models.OrderStatus,
 	})
 }

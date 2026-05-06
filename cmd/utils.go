@@ -1,21 +1,27 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"os"
 
+	"github.com/gin-contrib/sessions"
+	gormsessions "github.com/gin-contrib/sessions/gorm"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Config struct {
-	Port   string
-	DBPath string
+	Port             string
+	DBPath           string
+	SessionSecretKey string
 }
 
 func loadConfig() Config {
 	return Config{
-		Port:   getEnv("PORT", "8080"),
-		DBPath: getEnv("DATABASE_URL", "./data/orders.db"),
+		Port:             getEnv("PORT", "8080"),
+		DBPath:           getEnv("DATABASE_URL", "./data/orders.db"),
+		SessionSecretKey: getEnv("SESSION_SECET_KEY", "pizza-order-secret-key"),
 	}
 }
 
@@ -26,16 +32,62 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func loadTemplates(routers *gin.Engine) error {
-	function := template.FuncMap{
-		"add": func(a, b int) int { return a + b },
+func loadTemplates(router *gin.Engine) error {
+	funcMap := template.FuncMap{
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"json": func(v interface{}) template.JS {
+			if v == nil {
+				return "null"
+			}
+			b, err := json.Marshal(v)
+			if err != nil {
+				return "[]"
+			}
+			return template.JS(b)
+		},
 	}
 
-	tmpl, err := template.New("").Funcs(function).ParseGlob("templates/*.tmpl")
+	tmpl, err := template.New("templates").Funcs(funcMap).ParseGlob("templates/*.tmpl")
 	if err != nil {
 		return err
 	}
-
-	routers.SetHTMLTemplate(tmpl)
+	router.SetHTMLTemplate(tmpl)
 	return nil
+}
+
+func setupSessionStore(db *gorm.DB, secretKey []byte) sessions.Store {
+	store := gormsessions.NewStore(db, true, secretKey)
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: 3,
+	})
+
+	return store
+}
+
+func SetSessionValue(c *gin.Context, key string, value interface{}) error {
+	session := sessions.Default(c)
+	session.Set(key, value)
+	return session.Save()
+}
+
+func GetSessionString(c *gin.Context, key string) string {
+	session := sessions.Default(c)
+	val := session.Get(key)
+	if val == nil {
+		return ""
+	}
+	str, _ := val.(string)
+	return str
+}
+
+func ClearSession(c *gin.Context) error {
+	session := sessions.Default(c)
+	session.Clear()
+	return session.Save()
 }
