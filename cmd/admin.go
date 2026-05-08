@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"pizza-tracker/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +13,8 @@ type LoginData struct {
 }
 
 type AdminDashboaedData struct {
+	Orders   []models.Order
+	Statuses []string
 	Username string
 }
 
@@ -35,8 +39,8 @@ func (h *Handler) HandleLoginPost(c *gin.Context) {
 		return
 	}
 
-	SetSessionValue(c, "userId", user.ID)
-	SetSessionValue(c, "username", user.Username)
+	SetSessionValue(c, "userID", fmt.Sprintf("%v", user.ID))
+	SetSessionValue(c, "userName", fmt.Sprintf("%v", user.Username))
 
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
@@ -50,8 +54,36 @@ func (h *Handler) HandleLogout(c *gin.Context) {
 }
 
 func (h *Handler) ServerAdminDashboard(c *gin.Context) {
-	username := GetSessionString(c, "username")
+	orders, err := h.orders.GetAllOrders()
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Error fetching orders")
+		return
+	}
+	username := GetSessionString(c, "userName")
 	c.HTML(http.StatusOK, "admin.tmpl", AdminDashboaedData{
+		Orders:   orders,
+		Statuses: models.OrderStatus,
 		Username: username,
 	})
+}
+
+func (h *Handler) HandlerOrderPut(c *gin.Context) {
+	orderId := c.Param("id")
+	newStatus := c.PostForm("status")
+	if err := h.orders.UpdateOrderStatus(orderId, newStatus); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin")
+}
+
+func (h *Handler) HandlerOrderDelete(c *gin.Context) {
+	orderId := c.Param("id")
+	if err := h.orders.DeleteOrder(orderId); err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin")
 }

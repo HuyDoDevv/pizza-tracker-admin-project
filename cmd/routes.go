@@ -20,6 +20,8 @@ func setupRouters(router *gin.Engine, h *Handler, store sessions.Store) {
 	admin.Use(h.AuthMiddleware())
 	{
 		admin.GET("", h.ServerAdminDashboard)
+		admin.POST("/order/:id/update", h.HandlerOrderPut)
+		admin.POST("/order/:id/delete", h.HandlerOrderDelete)
 	}
 	router.Static("/static", "./templates/static")
 }

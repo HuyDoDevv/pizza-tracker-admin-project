@@ -8,7 +8,7 @@ import (
 
 func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userId := GetSessionString(c, "userId")
+		userId := GetSessionString(c, "userID")
 		if userId == "" {
 			c.Redirect(http.StatusSeeOther, "/login")
 			c.Abort()
