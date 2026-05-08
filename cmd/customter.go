@@ -71,6 +71,7 @@ func (h *Handler) HandlerNewOrderPost(c *gin.Context) {
 
 	slog.Info("Order created", "orderId", order.ID, "customer", order.CustomerName)
 
+	h.notification.Notify("admin:new_orders", "new_oder")
 	c.Redirect(http.StatusSeeOther, "/customer/"+order.ID)
 }
 

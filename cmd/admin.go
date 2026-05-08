@@ -75,6 +75,8 @@ func (h *Handler) HandlerOrderPut(c *gin.Context) {
 		return
 	}
 
+	h.notification.Notify("order:"+orderId, "order_updated")
+
 	c.Redirect(http.StatusSeeOther, "/admin")
 }
 
